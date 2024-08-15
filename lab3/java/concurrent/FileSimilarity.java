@@ -1,7 +1,25 @@
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class FileSimilarity {
+    public static Map<String, List<Long>> fileFingerprints = new HashMap<>();
+
+    public static class FileSumRunnable implements Runnable {
+        private String path;
+
+        public FileSumRunnable(String path) {
+            this.path = path;
+        }
+
+        @Override
+        public void run() {
+            try {
+                List<Long> fingerprint = fileSum(path);
+                fileFingerprints.put(path, fingerprint);
+            } catch(Exception e) {}
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
@@ -9,13 +27,22 @@ public class FileSimilarity {
             System.exit(1);
         }
 
-        // Create a map to store the fingerprint for each file
-        Map<String, List<Long>> fileFingerprints = new HashMap<>();
+        // Create a map to store the fingerprint for each fil
+        Thread[] threads = new Thread[args.length];
+
+        int index = -1;
 
         // Calculate the fingerprint for each file
         for (String path : args) {
-            List<Long> fingerprint = fileSum(path);
-            fileFingerprints.put(path, fingerprint);
+            index++;
+            FileSumRunnable run = new FileSumRunnable(path);
+            Thread newThread = new Thread(run);
+            threads[index] = newThread;
+            newThread.run();
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
         }
 
         // Compare each pair of files
@@ -47,9 +74,13 @@ public class FileSimilarity {
 
     private static long sum(byte[] buffer, int length) {
         long sum = 0;
-        for (int i = 0; i < length; i++) {
-            sum += Byte.toUnsignedInt(buffer[i]);
-        }
+
+        try {
+            for (int i = 0; i < length; i++) {
+                sum += Byte.toUnsignedInt(buffer[i]);
+            }
+        } catch (Exception e) {}
+
         return sum;
     }
 
