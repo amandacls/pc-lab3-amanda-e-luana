@@ -21,6 +21,26 @@ public class FileSimilarity {
         }
     }
 
+    public static class SimilarityRunnable implements Runnable {
+        private String file1;
+        private String file2;
+
+        public SimilarityRunnable(String file1, String file2) {
+            this.file1 = file1;
+            this.file2 = file2;
+        }
+
+        @Override
+        public void run() {
+            try {
+                List<Long> fingerprint1 = fileFingerprints.get(file1);
+                List<Long> fingerprint2 = fileFingerprints.get(file2);
+                float similarityScore = similarity(fingerprint1, fingerprint2);
+                System.out.println("Similarity between " + file1 + " and " + file2 + ": " + (similarityScore * 100) + "%");
+            } catch(Exception e) {}
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
             System.err.println("Usage: java Sum filepath1 filepath2 filepathN");
@@ -50,10 +70,10 @@ public class FileSimilarity {
             for (int j = i + 1; j < args.length; j++) {
                 String file1 = args[i];
                 String file2 = args[j];
-                List<Long> fingerprint1 = fileFingerprints.get(file1);
-                List<Long> fingerprint2 = fileFingerprints.get(file2);
-                float similarityScore = similarity(fingerprint1, fingerprint2);
-                System.out.println("Similarity between " + file1 + " and " + file2 + ": " + (similarityScore * 100) + "%");
+                
+                SimilarityRunnable runSimilarity = new SimilarityRunnable(file1, file2);
+                Thread t = new Thread(runSimilarity);
+                t.run();
             }
         }
     }
@@ -74,13 +94,9 @@ public class FileSimilarity {
 
     private static long sum(byte[] buffer, int length) {
         long sum = 0;
-
-        try {
-            for (int i = 0; i < length; i++) {
-                sum += Byte.toUnsignedInt(buffer[i]);
-            }
-        } catch (Exception e) {}
-
+        for (int i = 0; i < length; i++) {
+            sum += Byte.toUnsignedInt(buffer[i]);
+        }
         return sum;
     }
 
